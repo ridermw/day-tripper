@@ -1,0 +1,22 @@
+[project]
+name = "daytripper"
+version = "0.0.1"
+description = "Falsification-first day-trading research engine (daily-OHLC, single-boundary)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "GPL-3.0-or-later" }
+dependencies = ["numpy", "pandas", "pyarrow"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["daytripper*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
