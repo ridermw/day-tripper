@@ -31,3 +31,4 @@ data/cache/
 *.swp
 .idea/
 .vscode/
+.cache/
