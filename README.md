@@ -6,8 +6,10 @@ grades them, allocates across them, and runs them in continuous paper trading â€
 in public. A human seeds intent (via GitHub issues) and observes. **No real money is
 ever used.**
 
-> **Status:** design phase. The architecture is approved and documented in
-> [`docs/DESIGN.md`](docs/DESIGN.md). Code does not exist yet â€” Phase 1 is the next step.
+> **Status:** Phase 1 in progress. The architecture is approved
+> ([`docs/DESIGN.md`](docs/DESIGN.md)). The engine core, cost model, risk-free cash
+> baseline, data-provider abstraction (with parquet caching), and the candidate board
+> are implemented and tested. The dashboard and the scheduled loop come next.
 
 ## The thesis: honesty is the product
 
@@ -72,6 +74,15 @@ the audit trail and the human interface.
 
 - Full architecture: [`docs/DESIGN.md`](docs/DESIGN.md)
 - Operating rules for agent sessions: [`AGENTS.md`](AGENTS.md)
+
+### Develop
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pytest                      # run the test suite
+python -m daytripper.demo   # end-to-end candidate board on synthetic data
+```
 
 ## Disclaimer
 
