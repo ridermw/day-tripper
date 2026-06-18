@@ -1,0 +1,43 @@
+name: pre-close
+
+# Locks overnight (close-side) entries before the US closing auction.
+# See docs/DESIGN.md "Meta-loop" and AGENTS.md "The loop".
+
+on:
+  schedule:
+    # 19:45 UTC, weekdays — just before the 16:00 ET close (EDT).
+    - cron: "45 19 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      offline:
+        description: "Force the deterministic synthetic provider"
+        type: boolean
+        default: false
+
+concurrency:
+  group: daytripper-loop
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  pre-close:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e .
+      - name: Run pre-close
+        run: |
+          daytripper pre-close ${{ (github.event_name == 'workflow_dispatch' && inputs.offline) && '--offline' || '' }}
+      - name: Commit locked entries (audit trail)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/
+          git commit -m "pre-close: lock overnight entries [skip ci]" || echo "no changes"
+          git push || echo "nothing to push"

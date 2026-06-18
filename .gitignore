@@ -21,6 +21,9 @@ data/cache/
 *.parquet
 *.feather
 
+# Generated dashboard site (deployed to GitHub Pages by the post-close workflow)
+dashboard/site/
+
 # Secrets / local env
 .env
 .env.*

@@ -1,0 +1,8 @@
+id: overnight_momentum_long
+category: overnight          # buy at close, sell at next open
+side: long
+selection: momentum         # rank universe by trailing return, take the top names
+regime_gate: spy_above_200dma  # only trade when SPY is above its 200-day MA
+params:
+  lookback: 20              # trailing window (trading days) for the momentum signal
+  top_n: 10                 # at most 10 entries per boundary per book per day
