@@ -11,6 +11,8 @@ ever used.**
 > model, risk-free cash baseline, data-provider abstraction (with parquet caching), the
 > candidate board, a static HTML dashboard, and a scheduled publish workflow. Next: the
 > DSR/PBO falsification gauntlet (Phase 2) and live data providers.
+>
+> **Live dashboard:** https://ridermw.github.io/day-tripper/
 
 ## The thesis: honesty is the product
 
