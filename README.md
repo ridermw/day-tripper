@@ -6,8 +6,12 @@ grades them, allocates across them, and runs them in continuous paper trading �
 in public. A human seeds intent (via GitHub issues) and observes. **No real money is
 ever used.**
 
-> **Status:** design phase. The architecture is approved and documented in
-> [`docs/DESIGN.md`](docs/DESIGN.md). Code does not exist yet — Phase 1 is the next step.
+> **Status:** Phase 1 implemented. The architecture is documented in
+> [`docs/DESIGN.md`](docs/DESIGN.md) and the autopilot loop in [`docs/LOOP.md`](docs/LOOP.md).
+> The Phase 1 skeleton — data-provider abstraction, vectorized daily-OHLC engine, explicit
+> cost model, risk-free cash baseline, one reference strategy per side, a static dashboard,
+> and the three scheduled GitHub Actions workflows — is in place and publishes a
+> **candidate board** (not a leaderboard). Phase 2 (the falsification gauntlet) is next.
 
 ## The thesis: honesty is the product
 
@@ -71,7 +75,20 @@ the audit trail and the human interface.
 ## For contributors and agents
 
 - Full architecture: [`docs/DESIGN.md`](docs/DESIGN.md)
+- The autopilot loop (how the agent runs it): [`docs/LOOP.md`](docs/LOOP.md)
 - Operating rules for agent sessions: [`AGENTS.md`](AGENTS.md)
+
+## Quickstart
+
+```bash
+pip install -e ".[dev]"
+pytest -q                                  # run the test suite
+daytripper post-close --offline            # run the loop on deterministic synthetic data
+open dashboard/site/index.html             # view the generated candidate board
+```
+
+`--offline` forces a deterministic synthetic data source so the loop runs with no network;
+such runs are clearly labelled synthetic and are never presented as a real track record.
 
 ## Disclaimer
 

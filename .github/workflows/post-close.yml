@@ -1,0 +1,56 @@
+name: post-close
+
+# Ingests official EOD OHLC, runs the backtests, scores the candidate board, allocates,
+# simulates the day, regenerates the dashboard, commits the audit trail, and publishes the
+# site to GitHub Pages. See docs/DESIGN.md "Meta-loop" and AGENTS.md "The loop".
+
+on:
+  schedule:
+    # 23:00 UTC, weekdays — after the close, once EOD data has settled.
+    - cron: "0 23 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      offline:
+        description: "Force the deterministic synthetic provider"
+        type: boolean
+        default: false
+
+concurrency:
+  group: daytripper-loop
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  post-close:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e .
+      - name: Run post-close (backtests + score + allocate + dashboard)
+        run: |
+          daytripper post-close ${{ (github.event_name == 'workflow_dispatch' && inputs.offline) && '--offline' || '' }}
+      - name: Commit results (audit trail)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/
+          git commit -m "post-close: update results [skip ci]" || echo "no changes"
+          git push || echo "nothing to push"
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/site
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
