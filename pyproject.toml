@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "day-tripper"
+version = "0.1.0"
+description = "Falsification-first, agent-operated day-trading research system (Phase 1 skeleton)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "GPL-3.0-only" }
+authors = [{ name = "ridermw" }]
+
+# Pinned for reproducible, deterministic backtests (Design: Reproducibility).
+dependencies = [
+    "numpy==2.4.6",
+    "pandas==3.0.3",
+    "pyarrow==24.0.0",
+    "PyYAML==6.0.1",
+]
+
+[project.optional-dependencies]
+# Optional real data providers. The provider abstraction degrades gracefully to a
+# deterministic synthetic source when these are unavailable or network is blocked.
+providers = ["yfinance==0.2.65"]
+dev = ["pytest==9.1.0", "ruff==0.15.18"]
+
+[project.scripts]
+daytripper = "loop.cli:main"
+
+[tool.setuptools]
+packages = [
+    "data",
+    "engine",
+    "strategies",
+    "scorer",
+    "allocation",
+    "dashboard",
+    "loop",
+]
+
+[tool.setuptools.package-data]
+strategies = ["specs/*.yaml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

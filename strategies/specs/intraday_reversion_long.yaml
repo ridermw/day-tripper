@@ -1,0 +1,8 @@
+id: intraday_reversion_long
+category: intraday           # buy at open, sell at same-day close
+side: long
+selection: reversion        # buy recent laggards (short-term mean reversion)
+regime_gate: spy_above_200dma  # only trade when SPY is above its 200-day MA
+params:
+  lookback: 5               # trailing window (trading days) for the reversion signal
+  top_n: 10                 # at most 10 entries per boundary per book per day
