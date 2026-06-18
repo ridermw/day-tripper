@@ -1,0 +1,4 @@
+strategy,n_trades,net_pnl,cash_pnl,beats_cash
+overnight-short-all,320,-260.57917558567885,101.58730158730158,False
+overnight-long-all,320,-1019.4208244143211,101.58730158730158,False
+intraday-long-all,325,-1077.2835762460193,103.17460317460316,False

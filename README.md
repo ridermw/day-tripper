@@ -6,10 +6,11 @@ grades them, allocates across them, and runs them in continuous paper trading �
 in public. A human seeds intent (via GitHub issues) and observes. **No real money is
 ever used.**
 
-> **Status:** Phase 1 in progress. The architecture is approved
-> ([`docs/DESIGN.md`](docs/DESIGN.md)). The engine core, cost model, risk-free cash
-> baseline, data-provider abstraction (with parquet caching), and the candidate board
-> are implemented and tested. The dashboard and the scheduled loop come next.
+> **Status:** Phase 1. The architecture is approved
+> ([`docs/DESIGN.md`](docs/DESIGN.md)). Implemented and tested: the engine core, cost
+> model, risk-free cash baseline, data-provider abstraction (with parquet caching), the
+> candidate board, a static HTML dashboard, and a scheduled publish workflow. Next: the
+> DSR/PBO falsification gauntlet (Phase 2) and live data providers.
 
 ## The thesis: honesty is the product
 
@@ -54,12 +55,15 @@ required, and free EOD sources cover the research.
 6. **The meta-loop** — the md files, prompts, and GitHub Actions that let the agent build,
    run, grade, and maintain the whole thing. See [`AGENTS.md`](AGENTS.md).
 
-## How the loop runs (planned)
+## How the loop runs
 
-Three scheduled GitHub Actions workflows — **pre-open**, **pre-close**, and
-**post-close** — pull data, lock each boundary's entries, run the gauntlet, update
-allocation, simulate the day, regenerate the dashboard, and commit. Issues and PRs are
-the audit trail and the human interface.
+A **post-close** GitHub Actions job (`.github/workflows/daily.yml`) runs the backtest on
+EOD data, regenerates the candidate board, and republishes the dashboard to
+[`docs/`](docs/) (served on GitHub Pages). Commits are the audit trail.
+
+The design's **pre-open** and **pre-close** entry-locking jobs activate with paper
+execution (a later phase) — wiring empty schedules now would be cargo-cult. Today the
+loop runs on offline synthetic data; live providers are a follow-up.
 
 ## Roadmap
 
