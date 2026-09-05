@@ -56,9 +56,11 @@ on market conditions.
   book, so the two categories never compete for capital and can be compared cleanly.
   Within a book, the $10K is split across that day's selected names. Capital is **not**
   reused across boundaries within a day — each book is independent.
-- **Cash baseline:** staying in cash is always a valid allocation, and the cash
-  baseline **earns the risk-free / broker-sweep yield, not 0%** — in a higher-rate
-  environment cash is a real hurdle a strategy must clear after costs.
+- **Cash baseline:** staying in cash is always a valid allocation. The actionable
+  benchmark is the dividend-adjusted total return of **SGOV**, a liquid 0–3 month
+  Treasury ETF, rather than a theoretical annual rate. Idle strategy books earn that
+  same observed return. The rolling comparison window never predates SGOV's May 2020
+  inception.
 - **Trade cap (resolved):** at most **10 entry positions per boundary per book per
   day** (up to 10 overnight entries and up to 10 intraday entries), customizable.
   Automatic exits at the resolving boundary do not count against the cap.
@@ -98,8 +100,8 @@ These are the load-bearing assumptions, validated by research during the session
    scheduled loop runs each market day, updates results, publishes to Pages, and uses
    issues/PRs as the audit trail. (Confirmed.)
 5. **Don't reinvent.** Concrete reuse, behind a **data-provider abstraction** so no
-   single source is load-bearing: Stooq (primary EOD *if automated access verifies*) +
-   yfinance (fallback) with data-quality diff checks; optionally vectorbt (fast
+   single source is load-bearing: adjusted yfinance prices with explicit per-symbol
+   provenance and a disclosed synthetic fallback; optionally vectorbt (fast
    candidate sweeps); **mlfinlab if it installs cleanly, otherwise hand-rolled** DSR /
    PBO / purged-CV primitives (a few hundred lines); MABWiser / PyPortfolioOpt
    (allocation); hmmlearn (regime detection); Alpaca paper (optional execution).
@@ -173,10 +175,11 @@ These are the load-bearing assumptions, validated by research during the session
 **Approach C implemented on an A foundation.** Lean, GitHub-native, organized as a
 falsification/promotion tournament. Component map:
 
-1. **Data layer.** A **provider abstraction** (Stooq if automated access verifies,
-   yfinance fallback, data-quality diff checks) — no single source is load-bearing.
-   Adjusted OHLC for the universe with a liquidity floor (e.g. dollar-volume threshold).
-   Local cache (parquet) so backtests are reproducible and offline-capable. A
+1. **Data layer.** A **provider abstraction** using adjusted yfinance prices, explicit
+   per-symbol provenance, and a disclosed synthetic fallback. Stooq remains eligible
+   only after its automated access and adjustment behavior are verified. Adjusted OHLC
+   for the universe with a liquidity floor (e.g. dollar-volume threshold). Local cache
+   (parquet) so backtests are reproducible and offline-capable. A
    point-in-time universe membership table to avoid survivorship bias (Phase 1 sidesteps
    this by starting with liquid ETFs).
 
@@ -210,7 +213,7 @@ falsification/promotion tournament. Component map:
 4. **Scorer / falsification gate.** No strategy is "good" until it survives, in order:
    (a) positive net of costs, (b) purged walk-forward out-of-sample with embargo,
    (c) **Deflated Sharpe + PBO/CSCV** penalty computed against the immutable trial
-   ledger, (d) beats the **cash baseline (at risk-free yield)** after costs. Only
+   ledger, (d) beats the **SGOV total-return cash baseline** after costs. Only
    survivors are promoted to the **leaderboard**; everything pre-gauntlet lives on a
    clearly-labeled **candidate board** (ungraded), and failures go to a public
    **graveyard** with the reason they died. The **trial ledger** assigns every
@@ -220,14 +223,14 @@ falsification/promotion tournament. Component map:
 5. **Adaptive allocation (meta-strategy).** Online allocation across *promoted*
    strategies — bandit (EXP3/Thompson) or online-portfolio (Hedge/AdaHedge) — gated by
    a regime detector (rule-based first, HMM later). Allocates each fixed **$10K/day,
-   non-compounding** book, with cash (at risk-free yield) as a first-class arm, and
+   non-compounding** book, with SGOV as a first-class cash arm, and
    respects the per-boundary trade cap and decision cutoffs. **Default production
    allocator is equal-weight + cash; the learned meta-strategy runs in shadow mode and
    only takes command once it beats that benchmark and cash after costs out-of-sample.**
 
 6. **Dashboard.** Static site → GitHub Pages: the graded **leaderboard** (DSR-ranked),
    the ungraded **candidate board**, the **graveyard**, today's intended trades,
-   realized daily/weekly/monthly P&L vs the risk-free cash baseline, regime state, the
+   realized daily/weekly/monthly P&L vs the SGOV cash baseline, regime state, the
    cost-sensitivity table, and per-strategy detail. Generated by the post-close job; no
    server.
 
@@ -241,16 +244,19 @@ falsification/promotion tournament. Component map:
    in CI; agent/LLM steps (proposing and triaging strategies) run as bounded,
    budget-capped invocations; broker/API credentials live in GitHub Secrets; any job
    failure opens an issue and the loop is idempotent so it can re-run safely. A
-   **data-provider abstraction** sits behind Stooq with a yfinance fallback and a
-   data-quality diff check, so a blocked or changed source degrades gracefully instead
-   of corrupting results. The human seeds intent and observes via issues; the agent runs
+   **data-provider abstraction** uses dividend-adjusted yfinance prices and an explicit
+   per-symbol synthetic fallback, so an unavailable source degrades visibly instead of
+   corrupting results. Stooq remains deferred until its adjustment and automated access
+   behavior are verified. The human seeds intent and observes via issues; the agent runs
    everything else.
 
 **Phasing:**
-- **Phase 1 (skeleton):** data-provider abstraction (Stooq + yfinance fallback) +
-  parquet cache + vectorized daily-OHLC engine + explicit cost model + risk-free cash
-  baseline + one reference strategy per side + static dashboard + the three Actions
-  schedules. **Start the universe with liquid ETFs only** (clean data, no survivorship
+- **Phase 1 (skeleton):** data-provider abstraction (adjusted yfinance + disclosed
+  synthetic fallback) + parquet cache + vectorized daily-OHLC engine + explicit cost
+  model + SGOV total-return cash baseline + one reference strategy per side + static
+  dashboard + the post-close research schedule. Pre-open and pre-close entry locks are
+  deferred until Phase 4, when paper execution can consume them. **Start the universe
+  with liquid ETFs only** (clean data, no survivorship
   problem) and label any single-name results as exploratory/biased until point-in-time
   membership exists. Phase 1 publishes a **candidate board**, not a leaderboard.
 - **Phase 2 (rigor):** trial ledger + purged walk-forward CV + DSR + PBO/CSCV gate +
@@ -268,11 +274,13 @@ falsification/promotion tournament. Component map:
 - **Short realism is a gate, not an option.** Shorts are restricted to liquid ETFs /
   large caps until a borrow-fee + hard-to-borrow model exists; no short strategy is
   promoted without it.
-- **Cash baseline = risk-free / broker-sweep yield**, not 0%.
+- **Cash baseline = dividend-adjusted SGOV total return**, not 0% or a theoretical
+  annual rate.
 - **"Leaderboard" is reserved for post-gauntlet survivors.** Pre-gauntlet results are a
   labeled "candidate board." This keeps the Issue #1 constitution ("nothing reaches the
   leaderboard until it beats cash after costs out-of-sample") internally consistent.
-- **Three schedules** (pre-open, pre-close, post-close), not a single EOD cron.
+- **Three schedules** remain the paper-execution architecture. Phase 1 runs only the
+  post-close research schedule; pre-open and pre-close activate in Phase 4.
 - **Trade cap = 10 entries per boundary per book per day**; capital is two independent
   $10K books (overnight, intraday).
 - **Promotion is not permanent.** Promoted strategies are re-evaluated each cycle and
@@ -290,8 +298,9 @@ Stated plainly so the public track record is honest about its own limits:
 - **Official open/close prices are not guaranteed fills.** Conservative slippage and a
   liquidity floor partly compensate; the cost-sensitivity table shows how conclusions
   move as assumptions tighten.
-- **Stooq access can change or be blocked.** The provider abstraction + yfinance
-  fallback + data-quality diff checks contain this risk.
+- **Free-provider access can change or be blocked.** The provider abstraction records
+  the source used for every symbol and discloses mixed runs explicitly, such as
+  `mixed: synthetic, yfinance`. Synthetic fallback prices are never cached.
 - **Compute limits.** Russell 2000 × many years × many variants is batched, uses
   cached return matrices and float32 where acceptable, and is bounded by per-run trial
   budgets to fit GitHub Actions.
@@ -326,10 +335,10 @@ Stated plainly so the public track record is honest about its own limits:
 
 This is a continuously running public system, not a downloadable artifact.
 - **Hosting:** GitHub repo (public) + GitHub Pages for the dashboard.
-- **CI/CD:** GitHub Actions — **three scheduled workflows** (pre-open, pre-close,
-  post-close) behind the data-provider abstraction. The post-close job pulls data, runs
-  the gauntlet, updates allocation, simulates the day, regenerates the dashboard, and
-  commits; the pre-open and pre-close jobs lock that boundary's entries.
+- **CI/CD:** GitHub Actions — the Phase 1 post-close workflow pulls data, runs the
+  candidate evaluation, regenerates the dashboard, and commits it. The pre-open and
+  pre-close workflows activate with Phase 4 paper execution and lock that boundary's
+  entries.
   PRs/issues are the audit trail and the human interface.
 - **Reproducibility:** pinned dependencies, cached EOD data committed or rebuildable,
   and deterministic backtests so any observer can re-run and verify.
@@ -339,12 +348,13 @@ This is a continuously running public system, not a downloadable artifact.
 1. Scaffold the public repo from this design: `data/`, `strategies/`, `engine/`,
    `scorer/`, `allocation/`, `dashboard/`, `loop/` (md files, skills, prompts), plus a
    `README` stating the falsification-first thesis and the cash-baseline rule.
-2. Build the Phase 1 skeleton: data-provider abstraction (Stooq if verified, yfinance
-   fallback) + parquet cache + vectorized daily-OHLC engine + explicit cost model +
-   risk-free cash baseline + one reference strategy per side, on a liquid-ETF universe.
-3. Stand up the three scheduled GitHub Actions workflows (pre-open, pre-close,
-   post-close) and the static Pages dashboard so the loop is visible in public from the
-   first commit.
+2. Build the Phase 1 skeleton: adjusted yfinance provider with explicit synthetic
+   fallback + parquet cache + vectorized daily-OHLC engine + explicit cost model +
+   SGOV total-return cash baseline + one reference strategy per side, on a liquid-ETF
+   universe.
+3. Stand up the scheduled post-close research workflow and the static Pages dashboard
+   so the loop is visible in public from the first commit. Add pre-open and pre-close
+   entry-locking workflows with Phase 4 paper execution.
 4. Write the meta-loop docs (how the agent proposes, tests, grades, promotes/kills, and
    reports) so future sessions can run the loop from the repo alone.
 

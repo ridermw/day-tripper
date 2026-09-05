@@ -32,6 +32,14 @@ def _fmt(value: float) -> str:
 
 def render_dashboard(board: pd.DataFrame, meta: dict) -> str:
     universe = ", ".join(meta.get("universe", []))
+    data_source = str(meta.get("data_source", "unknown"))
+    cash_ticker = str(meta.get("cash_ticker", "unknown"))
+    cash_source = str(meta.get("cash_source", data_source))
+    cash_label = (
+        f"synthetic {cash_ticker} proxy"
+        if cash_source == "synthetic"
+        else f"{cash_ticker} total return"
+    )
     rows = []
     for _, r in board.iterrows():
         beats = bool(r["beats_cash"])
@@ -62,7 +70,8 @@ def render_dashboard(board: pd.DataFrame, meta: dict) -> str:
   capital ${meta.get('capital', 0):,.0f}/day ·
   universe: {_html.escape(universe)} ·
   bars: {meta.get('bars', 0)} ·
-  data: {_html.escape(str(meta.get('data_source', 'unknown')))} ·
+  data: {_html.escape(data_source)} ·
+  cash benchmark: {_html.escape(cash_label)} ·
   generated: {_html.escape(str(meta.get('generated', '')))}
 </div>
 <table>
@@ -74,8 +83,9 @@ def render_dashboard(board: pd.DataFrame, meta: dict) -> str:
 </tbody>
 </table>
 <p class="note">
-  Cash is the defending champion: every strategy is measured against a risk-free
-  cash baseline after costs. This is a <strong>candidate board only</strong> — the
+  Cash is the defending champion: every strategy is measured against the
+  dividend-adjusted return of the disclosed cash ETF. This is a
+  <strong>candidate board only</strong> — the
   falsification gauntlet (purged walk-forward, Deflated Sharpe, PBO) that promotes
   survivors to the real leaderboard is a later phase. Research and education only;
   no real money.
