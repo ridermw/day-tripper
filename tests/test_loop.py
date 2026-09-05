@@ -5,7 +5,7 @@ import pandas as pd
 from daytripper.costs import CostModel
 from daytripper.data import FallbackProvider, SyntheticProvider
 from daytripper.strategy import StrategySpec
-from daytripper.loop.run import run_once, write_artifacts
+from daytripper.loop.run import DEFAULT_CASH_TICKER, DEFAULT_UNIVERSE, run_once, write_artifacts
 
 
 def _strategies():
@@ -13,6 +13,12 @@ def _strategies():
         StrategySpec(name="overnight-long", category="overnight", side="long"),
         StrategySpec(name="intraday-long", category="intraday", side="long"),
     ]
+
+
+def test_default_universe_contains_real_liquid_etfs_separate_from_cash():
+    assert DEFAULT_UNIVERSE == ["SPY", "QQQ", "IWM", "DIA", "TLT"]
+    assert DEFAULT_CASH_TICKER == "SGOV"
+    assert DEFAULT_CASH_TICKER not in DEFAULT_UNIVERSE
 
 
 def test_run_once_produces_board_html_and_results():

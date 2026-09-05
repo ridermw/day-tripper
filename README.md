@@ -67,7 +67,8 @@ The design's **pre-open** and **pre-close** entry-locking jobs activate with pap
 execution (a later phase) — wiring empty schedules now would be cargo-cult. Today the
 loop fetches dividend-adjusted prices through yfinance and falls back per symbol to
 clearly labeled deterministic synthetic data. Use `--offline` for reproducible local
-runs without network access.
+runs without network access. Offline runs model SGOV separately as a low-volatility
+cash-like proxy, label it synthetic, and never serve it as observed SGOV data.
 
 ## Roadmap
 

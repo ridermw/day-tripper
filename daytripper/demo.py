@@ -17,7 +17,7 @@ from daytripper.data import CachingProvider, SyntheticProvider
 from daytripper.engine import run_backtest
 from daytripper.strategy import StrategySpec
 
-UNIVERSE = ["ETFA", "ETFB", "ETFC", "ETFD", "ETFE"]
+UNIVERSE = ["SPY", "QQQ", "IWM", "DIA", "TLT"]
 CASH_TICKER = "SGOV"
 CAPITAL = 10_000.0
 COST = CostModel(commission_bps=2.0, slippage_bps=3.0)
@@ -42,7 +42,10 @@ def uptrend_regime(history):
 
 def main() -> None:
     with tempfile.TemporaryDirectory() as cache_dir:
-        provider = CachingProvider(SyntheticProvider(seed=7), cache_dir=cache_dir)
+        provider = CachingProvider(
+            SyntheticProvider(seed=7, cash_tickers=[CASH_TICKER]),
+            cache_dir=cache_dir,
+        )
         prices = provider.fetch(
             [*UNIVERSE, CASH_TICKER], start="2024-01-01", end="2024-03-31"
         )

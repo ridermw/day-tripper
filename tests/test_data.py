@@ -46,6 +46,25 @@ def test_synthetic_provider_gives_each_ticker_distinct_stable_prices():
     pdt.assert_series_equal(together.closes["BBB"], alone.closes["BBB"])
 
 
+def test_synthetic_provider_models_declared_cash_etf_as_cash_like():
+    data = SyntheticProvider(seed=42, cash_tickers=["SGOV"]).fetch(
+        ["SPY", "SGOV"], start="2024-01-01", end="2024-12-31"
+    )
+
+    returns = data.closes.pct_change().dropna()
+    assert returns["SGOV"].std() < returns["SPY"].std() / 10
+    assert data.closes["SGOV"].iloc[-1] > data.closes["SGOV"].iloc[0]
+
+
+def test_synthetic_provider_accepts_single_cash_ticker_string():
+    data = SyntheticProvider(seed=42, cash_tickers="SGOV").fetch(
+        ["SPY", "SGOV"], start="2024-01-01", end="2024-12-31"
+    )
+
+    returns = data.closes.pct_change().dropna()
+    assert returns["SGOV"].std() < returns["SPY"].std() / 10
+
+
 class _CountingProvider:
     """Underlying provider that records how many times it was hit."""
 

@@ -30,7 +30,7 @@ from daytripper.data.providers import Provider
 from daytripper.engine import BacktestResult, run_backtest
 from daytripper.strategy import StrategySpec
 
-DEFAULT_UNIVERSE = ["ETFA", "ETFB", "ETFC", "ETFD", "ETFE"]
+DEFAULT_UNIVERSE = ["SPY", "QQQ", "IWM", "DIA", "TLT"]
 DEFAULT_CAPITAL = 10_000.0
 DEFAULT_COST = CostModel(commission_bps=2.0, slippage_bps=3.0)
 DEFAULT_CASH_TICKER = "SGOV"
@@ -112,7 +112,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     out_dir = positional[0] if positional else "docs"
 
     cache = Path(".cache/prices")
-    sources = [SyntheticProvider(seed=7)]
+    sources = [SyntheticProvider(seed=7, cash_tickers=[DEFAULT_CASH_TICKER])]
     if not offline:
         sources.insert(0, YFinanceProvider())
     provider = CachingProvider(FallbackProvider(sources), cache_dir=cache)

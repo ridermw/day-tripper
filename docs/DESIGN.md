@@ -60,7 +60,9 @@ on market conditions.
   benchmark is the dividend-adjusted total return of **SGOV**, a liquid 0–3 month
   Treasury ETF, rather than a theoretical annual rate. Idle strategy books earn that
   same observed return. The rolling comparison window never predates SGOV's May 2020
-  inception.
+  inception. With daily OHLC, the observed close-to-close SGOV total return is the
+  daily opportunity-cost hurdle for either book; the system does not fabricate
+  boundary-specific risk-free rates.
 - **Trade cap (resolved):** at most **10 entry positions per boundary per book per
   day** (up to 10 overnight entries and up to 10 intraday entries), customizable.
   Automatic exits at the resolving boundary do not count against the cap.
@@ -246,9 +248,11 @@ falsification/promotion tournament. Component map:
    failure opens an issue and the loop is idempotent so it can re-run safely. A
    **data-provider abstraction** uses dividend-adjusted yfinance prices and an explicit
    per-symbol synthetic fallback, so an unavailable source degrades visibly instead of
-   corrupting results. Stooq remains deferred until its adjustment and automated access
-   behavior are verified. The human seeds intent and observes via issues; the agent runs
-   everything else.
+   corrupting results. Offline fallback models SGOV separately as a low-volatility
+   cash-like series, labels it synthetic, and never serves it as observed SGOV
+   performance. Stooq remains deferred until its adjustment and automated access
+   behavior are verified. The human seeds intent and observes via issues; the agent
+   runs everything else.
 
 **Phasing:**
 - **Phase 1 (skeleton):** data-provider abstraction (adjusted yfinance + disclosed

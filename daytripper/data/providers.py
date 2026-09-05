@@ -34,9 +34,17 @@ class SyntheticProvider:
 
     source_name = "synthetic"
 
-    def __init__(self, seed: int = 0, start_price: float = 100.0):
+    def __init__(
+        self,
+        seed: int = 0,
+        start_price: float = 100.0,
+        cash_tickers: Sequence[str] = (),
+    ):
         self.seed = seed
         self.start_price = start_price
+        self.cash_tickers = (
+            {cash_tickers} if isinstance(cash_tickers, str) else set(cash_tickers)
+        )
 
     def fetch(self, tickers: Sequence[str], start: str, end: str) -> PriceData:
         # Drop the BusinessDay freq so data round-trips identically through
@@ -51,9 +59,14 @@ class SyntheticProvider:
             seed_material = f"{self.seed}:{ticker}".encode()
             ticker_seed = int.from_bytes(hashlib.sha256(seed_material).digest()[:8])
             rng = np.random.default_rng(ticker_seed)
-            daily_ret = rng.normal(0.0, 0.01, n)
+            if ticker in self.cash_tickers:
+                daily_ret = rng.normal(0.00015, 0.00003, n)
+                gap_volatility = 0.00002
+            else:
+                daily_ret = rng.normal(0.0, 0.01, n)
+                gap_volatility = 0.005
             closes = self.start_price * np.cumprod(1.0 + daily_ret)
-            gaps = rng.normal(0.0, 0.005, n)
+            gaps = rng.normal(0.0, gap_volatility, n)
             opens = np.empty(n)
             opens[0] = self.start_price
             opens[1:] = closes[:-1] * (1.0 + gaps[1:])

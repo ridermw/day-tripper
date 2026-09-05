@@ -137,7 +137,7 @@ def test_idle_book_earns_cash_etf_return():
     assert result.total_pnl == pytest.approx(100.0)
 
 
-def test_overnight_cash_comparison_uses_same_holding_period():
+def test_overnight_cash_comparison_uses_next_observed_daily_cash_return():
     prices = _prices(
         opens={
             "2024-01-02": {"AAA": 100.0, "SGOV": 100.0},
