@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
@@ -20,16 +19,21 @@ import pandas as pd
 
 from daytripper.board import candidate_board
 from daytripper.costs import CostModel
-from daytripper.data import CachingProvider, SyntheticProvider
+from daytripper.data import (
+    CachingProvider,
+    FallbackProvider,
+    SyntheticProvider,
+    YFinanceProvider,
+)
 from daytripper.dashboard import render_dashboard
 from daytripper.data.providers import Provider
 from daytripper.engine import BacktestResult, run_backtest
 from daytripper.strategy import StrategySpec
 
-DEFAULT_UNIVERSE = ["ETFA", "ETFB", "ETFC", "ETFD", "ETFE"]
+DEFAULT_UNIVERSE = ["SPY", "QQQ", "IWM", "DIA", "TLT"]
 DEFAULT_CAPITAL = 10_000.0
 DEFAULT_COST = CostModel(commission_bps=2.0, slippage_bps=3.0)
-DEFAULT_RISK_FREE = 0.04
+DEFAULT_CASH_TICKER = "SGOV"
 
 
 @dataclass
@@ -48,18 +52,27 @@ def run_once(
     end: str,
     capital: float,
     cost_model: CostModel,
-    risk_free_annual: float,
-    generated: str,
-    data_source: str = "synthetic",
+    cash_ticker: str,
+    generated: str | None,
+    data_source: str | None = None,
 ) -> RunArtifacts:
-    prices = provider.fetch(list(universe), start, end)
+    requested_tickers = list(dict.fromkeys([*universe, cash_ticker]))
+    prices = provider.fetch(requested_tickers, start, end)
+    actual_source = getattr(provider, "data_source", data_source or "unknown")
+    sources = getattr(provider, "sources", {})
+    cash_source = sources.get(
+        cash_ticker,
+        getattr(provider, "source_name", actual_source),
+    )
+    if generated is None:
+        generated = f"{prices.dates[-1].date().isoformat()}T00:00:00Z"
     results = {
         spec.name: run_backtest(
             prices,
             spec,
             capital=capital,
             cost_model=cost_model,
-            risk_free_annual=risk_free_annual,
+            cash_ticker=cash_ticker,
         )
         for spec in strategies
     }
@@ -69,7 +82,9 @@ def run_once(
         "universe": list(universe),
         "bars": len(prices.dates),
         "generated": generated,
-        "data_source": data_source,
+        "data_source": actual_source,
+        "cash_ticker": cash_ticker,
+        "cash_source": cash_source,
     }
     html = render_dashboard(board, meta)
     return RunArtifacts(board=board, html=html, results=results)
@@ -92,23 +107,31 @@ def default_strategies() -> list[StrategySpec]:
 
 def main(argv: Sequence[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
-    out_dir = argv[0] if argv else "docs"
+    offline = "--offline" in argv
+    positional = [arg for arg in argv if not arg.startswith("--")]
+    out_dir = positional[0] if positional else "docs"
 
     cache = Path(".cache/prices")
-    provider = CachingProvider(SyntheticProvider(seed=7), cache_dir=cache)
-    generated = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    sources = [SyntheticProvider(seed=7, cash_tickers=[DEFAULT_CASH_TICKER])]
+    if not offline:
+        sources.insert(0, YFinanceProvider())
+    provider = CachingProvider(FallbackProvider(sources), cache_dir=cache)
+    end = pd.Timestamp.now(tz="UTC").date()
+    start = max(
+        pd.Timestamp(end) - pd.DateOffset(years=5),
+        pd.Timestamp("2020-05-26"),
+    ).date()
 
     artifacts = run_once(
         provider,
         default_strategies(),
         universe=DEFAULT_UNIVERSE,
-        start="2024-01-01",
-        end="2024-03-31",
+        start=start.isoformat(),
+        end=end.isoformat(),
         capital=DEFAULT_CAPITAL,
         cost_model=DEFAULT_COST,
-        risk_free_annual=DEFAULT_RISK_FREE,
-        generated=generated,
-        data_source="synthetic (offline) — live providers pending",
+        cash_ticker=DEFAULT_CASH_TICKER,
+        generated=None,
     )
     write_artifacts(artifacts, out_dir)
     print(f"wrote dashboard to {out_dir}/index.html and {out_dir}/board.csv")

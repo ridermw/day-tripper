@@ -3,8 +3,8 @@
 Run it with:  python -m daytripper.demo
 
 This wires the tested pieces together so the loop produces a visible, ranked
-candidate board (ungraded) with every strategy measured against the risk-free
-cash baseline. It uses the offline synthetic provider, so it runs anywhere.
+candidate board (ungraded) with every strategy measured against an actionable
+cash ETF baseline. It uses the offline synthetic provider, so it runs anywhere.
 """
 
 from __future__ import annotations
@@ -17,10 +17,10 @@ from daytripper.data import CachingProvider, SyntheticProvider
 from daytripper.engine import run_backtest
 from daytripper.strategy import StrategySpec
 
-UNIVERSE = ["ETFA", "ETFB", "ETFC", "ETFD", "ETFE"]
+UNIVERSE = ["SPY", "QQQ", "IWM", "DIA", "TLT"]
+CASH_TICKER = "SGOV"
 CAPITAL = 10_000.0
 COST = CostModel(commission_bps=2.0, slippage_bps=3.0)
-RISK_FREE_ANNUAL = 0.04
 
 
 def momentum_select(history, universe):
@@ -42,8 +42,13 @@ def uptrend_regime(history):
 
 def main() -> None:
     with tempfile.TemporaryDirectory() as cache_dir:
-        provider = CachingProvider(SyntheticProvider(seed=7), cache_dir=cache_dir)
-        prices = provider.fetch(UNIVERSE, start="2024-01-01", end="2024-03-31")
+        provider = CachingProvider(
+            SyntheticProvider(seed=7, cash_tickers=[CASH_TICKER]),
+            cache_dir=cache_dir,
+        )
+        prices = provider.fetch(
+            [*UNIVERSE, CASH_TICKER], start="2024-01-01", end="2024-03-31"
+        )
 
         strategies = [
             StrategySpec(name="overnight-long-all", category="overnight", side="long"),
@@ -67,7 +72,7 @@ def main() -> None:
                 spec,
                 capital=CAPITAL,
                 cost_model=COST,
-                risk_free_annual=RISK_FREE_ANNUAL,
+                cash_ticker=CASH_TICKER,
             )
             for spec in strategies
         }

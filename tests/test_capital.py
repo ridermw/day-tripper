@@ -1,4 +1,4 @@
-"""Capital model: risk-free cash baseline and non-compounding daily notional."""
+"""Capital model: actionable cash baseline and non-compounding daily notional."""
 
 import pandas as pd
 import pytest
@@ -11,20 +11,19 @@ from daytripper.engine import run_backtest
 ZERO_COST = CostModel(0.0, 0.0)
 
 
-def test_cash_baseline_earns_risk_free_yield():
+def test_cash_baseline_tracks_cash_etf():
     idx = pd.to_datetime(["2024-01-02", "2024-01-03"])
-    opens = pd.DataFrame({"AAA": [100.0, 100.0]}, index=idx)
-    closes = pd.DataFrame({"AAA": [110.0, 110.0]}, index=idx)
+    opens = pd.DataFrame({"AAA": [100.0, 100.0], "SGOV": [100.0, 100.01]}, index=idx)
+    closes = pd.DataFrame({"AAA": [110.0, 110.0], "SGOV": [100.0, 100.01]}, index=idx)
     prices = PriceData(opens=opens, closes=closes)
     spec = StrategySpec(name="id", category="intraday", side="long")
 
-    # 2.52% annual / 252 trading days = 0.01% daily -> $1/day on $10k.
     res = run_backtest(
-        prices, spec, capital=10_000.0, cost_model=ZERO_COST, risk_free_annual=0.0252
+        prices, spec, capital=10_000.0, cost_model=ZERO_COST, cash_ticker="SGOV"
     )
 
     assert len(res.cash_baseline) == 2
-    assert res.cash_baseline.tolist() == pytest.approx([1.0, 1.0])
+    assert res.cash_baseline.tolist() == pytest.approx([0.0, 1.0])
 
 
 def test_notional_is_non_compounding():

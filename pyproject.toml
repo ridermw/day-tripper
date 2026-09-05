@@ -9,6 +9,7 @@ dependencies = ["numpy", "pandas", "pyarrow"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+providers = ["yfinance==1.7.0"]
 
 [build-system]
 requires = ["setuptools>=68"]
