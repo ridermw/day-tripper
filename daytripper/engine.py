@@ -38,40 +38,53 @@ class BacktestResult:
     total_pnl: float
 
 
-TRADING_DAYS_PER_YEAR = 252
-
-
 def run_backtest(
     prices: PriceData,
     spec: StrategySpec,
     capital: float = 10_000.0,
     cost_model: CostModel | None = None,
     max_positions: int = 10,
-    risk_free_annual: float = 0.0,
+    cash_ticker: str | None = None,
 ) -> BacktestResult:
     dates = list(prices.dates)
     costs = cost_model or CostModel()
-    daily_rf = risk_free_annual / TRADING_DAYS_PER_YEAR
+    if cash_ticker is not None and cash_ticker not in prices.tickers:
+        raise ValueError(f"cash benchmark {cash_ticker} is missing from prices")
+    strategy_tickers = [ticker for ticker in prices.tickers if ticker != cash_ticker]
+    strategy_prices = PriceData(
+        opens=prices.opens[strategy_tickers],
+        closes=prices.closes[strategy_tickers],
+    )
+    if cash_ticker is None:
+        cash_returns = pd.Series(0.0, index=prices.dates)
+    else:
+        cash_returns = prices.closes[cash_ticker].pct_change(fill_method=None).fillna(0.0)
 
     # Overnight trades exit at the *next* open, so the last date has no exit.
     if spec.category == "overnight":
         trade_dates = dates[:-1]
+        cash_by_trade_day = {
+            day: float(cash_returns.at[dates[i + 1]])
+            for i, day in enumerate(trade_dates)
+        }
     else:
         trade_dates = dates
+        cash_by_trade_day = {day: float(cash_returns.at[day]) for day in trade_dates}
 
     rows: list[dict] = []
     daily: dict = {}
 
     for i, day in enumerate(trade_dates):
-        history = prices.before(day)
+        history = strategy_prices.before(day)
         if spec.regime(history):
-            selected = list(spec.select(history, prices.tickers))
+            selected = list(spec.select(history, strategy_tickers))
             # Cap entries per day, preserving the selector's priority order.
             selected = selected[:max_positions]
         else:
             selected = []
 
-        day_pnl = 0.0
+        cash_pnl = capital * cash_by_trade_day[day]
+        day_pnl = cash_pnl if not selected else 0.0
         n = len(selected)
         if n > 0:
             notional = capital / n
@@ -108,9 +121,9 @@ def run_backtest(
     trades = pd.DataFrame(rows, columns=TRADE_COLUMNS)
     daily_pnl = pd.Series(daily, dtype=float)
     cash_baseline = pd.Series(
-        {day: capital * daily_rf for day in trade_dates}, dtype=float
+        {day: capital * cash_by_trade_day[day] for day in trade_dates}, dtype=float
     )
-    total_pnl = float(trades["net_pnl"].sum()) if not trades.empty else 0.0
+    total_pnl = float(daily_pnl.sum())
     return BacktestResult(
         trades=trades,
         daily_pnl=daily_pnl,

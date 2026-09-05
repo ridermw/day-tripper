@@ -8,9 +8,9 @@ ever used.**
 
 > **Status:** Phase 1. The architecture is approved
 > ([`docs/DESIGN.md`](docs/DESIGN.md)). Implemented and tested: the engine core, cost
-> model, risk-free cash baseline, data-provider abstraction (with parquet caching), the
+> model, SGOV cash benchmark, data-provider abstraction (with parquet caching), the
 > candidate board, a static HTML dashboard, and a scheduled publish workflow. Next: the
-> DSR/PBO falsification gauntlet (Phase 2) and live data providers.
+> DSR/PBO falsification gauntlet (Phase 2).
 >
 > **Live dashboard:** https://ridermw.github.io/day-tripper/
 
@@ -20,8 +20,8 @@ Most "trading systems" show a wall of green by ignoring transaction costs and
 data-mining their own backtests. day-tripper is built to do the opposite. Its core job
 is to **kill strategies**, not collect them.
 
-- **Cash is the defending champion.** Nothing reaches the leaderboard until it beats a
-  risk-free cash baseline *after costs*, *out-of-sample*.
+- **Cash is the defending champion.** Nothing reaches the leaderboard until it beats
+  dividend-adjusted SGOV total return *after costs*, *out-of-sample*.
 - **Every trial is counted.** A many-strategy leaderboard is multiple-hypothesis testing.
   An immutable trial ledger feeds a Deflated Sharpe Ratio + Probability-of-Backtest-
   Overfitting penalty so the system can't lie to itself.
@@ -65,7 +65,9 @@ EOD data, regenerates the candidate board, and republishes the dashboard to
 
 The design's **pre-open** and **pre-close** entry-locking jobs activate with paper
 execution (a later phase) — wiring empty schedules now would be cargo-cult. Today the
-loop runs on offline synthetic data; live providers are a follow-up.
+loop fetches dividend-adjusted prices through yfinance and falls back per symbol to
+clearly labeled deterministic synthetic data. Use `--offline` for reproducible local
+runs without network access.
 
 ## Roadmap
 
@@ -88,6 +90,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest                      # run the test suite
 python -m daytripper.demo   # end-to-end candidate board on synthetic data
+python -m daytripper.loop.run docs --offline
 ```
 
 ## Disclaimer

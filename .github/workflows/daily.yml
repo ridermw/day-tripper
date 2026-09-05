@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,providers]"
       - name: Run the loop
         run: python -m daytripper.loop.run docs
       - name: Commit updated dashboard

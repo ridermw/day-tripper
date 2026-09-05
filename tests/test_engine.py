@@ -77,3 +77,85 @@ def test_short_flips_sign():
 
     assert res.trades.iloc[0]["net_pnl"] == pytest.approx(-1000.0)
     assert res.total_pnl == pytest.approx(-1000.0)
+
+
+def test_cash_baseline_tracks_cash_etf_total_return():
+    prices = _prices(
+        opens={
+            "2024-01-02": {"AAA": 100.0, "SGOV": 100.0},
+            "2024-01-03": {"AAA": 100.0, "SGOV": 101.0},
+            "2024-01-04": {"AAA": 100.0, "SGOV": 102.01},
+        },
+        closes={
+            "2024-01-02": {"AAA": 100.0, "SGOV": 100.0},
+            "2024-01-03": {"AAA": 100.0, "SGOV": 101.0},
+            "2024-01-04": {"AAA": 100.0, "SGOV": 102.01},
+        },
+    )
+    spec = StrategySpec(name="cash-comparison", category="intraday", side="long")
+
+    result = run_backtest(
+        prices,
+        spec,
+        capital=10_000.0,
+        cost_model=ZERO_COST,
+        cash_ticker="SGOV",
+    )
+
+    assert list(result.trades["ticker"].unique()) == ["AAA"]
+    assert list(result.cash_baseline) == pytest.approx([0.0, 100.0, 100.0])
+
+
+def test_idle_book_earns_cash_etf_return():
+    prices = _prices(
+        opens={
+            "2024-01-02": {"AAA": 100.0, "SGOV": 100.0},
+            "2024-01-03": {"AAA": 100.0, "SGOV": 101.0},
+        },
+        closes={
+            "2024-01-02": {"AAA": 100.0, "SGOV": 100.0},
+            "2024-01-03": {"AAA": 100.0, "SGOV": 101.0},
+        },
+    )
+    spec = StrategySpec(
+        name="never-on",
+        category="intraday",
+        side="long",
+        regime=lambda history: False,
+    )
+
+    result = run_backtest(
+        prices,
+        spec,
+        capital=10_000.0,
+        cost_model=ZERO_COST,
+        cash_ticker="SGOV",
+    )
+
+    assert result.trades.empty
+    assert list(result.daily_pnl) == pytest.approx([0.0, 100.0])
+    assert result.total_pnl == pytest.approx(100.0)
+
+
+def test_overnight_cash_comparison_uses_same_holding_period():
+    prices = _prices(
+        opens={
+            "2024-01-02": {"AAA": 100.0, "SGOV": 100.0},
+            "2024-01-03": {"AAA": 100.0, "SGOV": 101.0},
+        },
+        closes={
+            "2024-01-02": {"AAA": 100.0, "SGOV": 100.0},
+            "2024-01-03": {"AAA": 100.0, "SGOV": 101.0},
+        },
+    )
+    spec = StrategySpec(name="overnight", category="overnight", side="long")
+
+    result = run_backtest(
+        prices,
+        spec,
+        capital=10_000.0,
+        cost_model=ZERO_COST,
+        cash_ticker="SGOV",
+    )
+
+    assert list(result.cash_baseline) == pytest.approx([100.0])

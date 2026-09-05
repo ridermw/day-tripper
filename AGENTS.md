@@ -9,8 +9,9 @@ the short version of the rules you must not break.
 ## Non-negotiables (the constitution)
 
 1. **Cash is the defending champion.** No strategy reaches the **leaderboard** until it
-   beats a risk-free cash baseline *after costs*, *out-of-sample*. Pre-gauntlet results
-   live on a clearly-labeled **candidate board**, never called a leaderboard.
+   beats dividend-adjusted SGOV total return *after costs*, *out-of-sample*.
+   Pre-gauntlet results live on a clearly-labeled **candidate board**, never called a
+   leaderboard.
 2. **Count every trial.** Every generated, mutated, and rejected strategy/parameter set
    registers in an **immutable trial ledger** with a unique id and counts against the
    multiple-testing penalty (Deflated Sharpe Ratio + Probability of Backtest Overfitting
@@ -24,7 +25,7 @@ the short version of the rules you must not break.
 5. **Single-boundary holds only** — close→open or open→close. Never multi-day.
 6. **Capital model:** two independent **$10,000/day, non-compounding** books (overnight,
    intraday). At most **10 entries per boundary per book per day** (customizable). Cash
-   earns the risk-free / broker-sweep yield, not 0%.
+   earns the observed SGOV total return, not 0% or a theoretical annual rate.
 7. **Daily OHLC only.** No intraday/tick data is required or used.
 8. **No real money. Ever.** Paper / simulated execution only. Shorts are restricted to
    liquid ETFs / large caps until a borrow-fee model exists.
@@ -60,8 +61,8 @@ credentials live in GitHub Secrets; jobs are idempotent and open an issue on fai
 The repo is in design phase — no code yet. Build in the phase order in
 [`docs/DESIGN.md`](docs/DESIGN.md):
 
-- **Phase 1:** provider abstraction (Stooq if verified, yfinance fallback) + parquet
-  cache + vectorized daily-OHLC engine + cost model + risk-free cash baseline + one
+- **Phase 1:** adjusted yfinance provider with a disclosed synthetic fallback + parquet
+  cache + vectorized daily-OHLC engine + cost model + SGOV total-return baseline + one
   reference strategy per side, on a **liquid-ETF universe**. Publishes a candidate board.
 - Then Phase 2 (rigor) → Phase 3 (allocation) → Phase 4 (optional paper execution).
 

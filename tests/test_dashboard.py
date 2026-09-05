@@ -21,6 +21,7 @@ def _meta() -> dict:
         "bars": 65,
         "generated": "2026-06-18T00:00:00Z",
         "data_source": "synthetic",
+        "cash_ticker": "SGOV",
     }
 
 
@@ -50,3 +51,16 @@ def test_render_marks_beats_cash_and_discloses_data_source():
     assert "✗" in html  # dud does not
     # Honesty: the dashboard says what data it ran on.
     assert "synthetic" in html
+    assert "SGOV" in html
+    assert "synthetic SGOV proxy" in html
+
+
+def test_cash_label_uses_cash_tickers_own_provenance():
+    meta = _meta()
+    meta["data_source"] = "mixed: synthetic, yfinance"
+    meta["cash_source"] = "yfinance"
+
+    html = render_dashboard(_board(), meta)
+
+    assert "cash benchmark: SGOV total return" in html
+    assert "synthetic SGOV proxy" not in html
